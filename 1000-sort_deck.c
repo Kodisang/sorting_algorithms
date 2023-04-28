@@ -2,59 +2,48 @@
 #include <stdio.h>
 #include "deck.h"
 
-void print_deck(const deck_node_t *deck)
-{
-    size_t i;
-    char kinds[4] = {'S', 'H', 'C', 'D'};
+int compare_cards(const card_t *a, const card_t *b) {
+    static const char *values[] = {"Ace", "2", "3", "4", "5", "6", "7", "8", "9", "10", "Jack", "Queen", "King"};
+    int value_a, value_b;
 
-    i = 0;
-    while (deck)
-    {
-        if (i)
-            printf(", ");
-        printf("{%s, %c}", deck->card->value, kinds[deck->card->kind]);
-        if (i == 12)
-            printf("\n");
-        i = (i + 1) % 13;
-        deck = deck->next;
+    for (value_a = 0; value_a < 13 && values[value_a] != a->value; ++value_a);
+    for (value_b = 0; value_b < 13 && values[value_b] != b->value; ++value_b);
+
+    if (value_a == value_b) {
+        return a->kind - b->kind;
+    } else {
+        return value_a - value_b;
     }
 }
 
-deck_node_t *init_deck(const card_t cards[52])
-{
-    deck_node_t *deck;
-    deck_node_t *node;
-    size_t i;
+void sort_deck(deck_node_t **deck) {
+    deck_node_t *current = *deck;
+    deck_node_t *next;
+    deck_node_t *sorted = NULL;
+    deck_node_t *temp;
 
-    i = 52;
-    deck = NULL;
-    while (i--)
-    {
-        node = malloc(sizeof(*node));
-        if (!node)
-            return (NULL);
-        node->card = &cards[i];
-        node->next = deck;
-        node->prev = NULL;
-        if (deck)
-            deck->prev = node;
-        deck = node;
+    while (current != NULL) {
+        next = current->next;
+        if (sorted == NULL || compare_cards(current->card, sorted->card) < 0) {
+            current->next = sorted;
+            if (sorted != NULL) {
+                sorted->prev = current;
+            }
+            sorted = current;
+        } else {
+            temp = sorted;
+            while (temp->next != NULL && compare_cards(current->card, temp->next->card) > 0) {
+                temp = temp->next;
+            }
+            current->next = temp->next;
+            if (temp->next != NULL) {
+                temp->next->prev = current;
+            }
+            temp->next = current;
+            current->prev = temp;
+        }
+        current = next;
     }
-    return (deck);
-}
 
-int main(void)
-{
-    card_t cards[52] = {
-        {"Jack", CLUB}, {"4", HEART}, {"3", HEART}, {"3", DIAMOND}, {"Queen", HEART}, {"5", HEART}, {"5", SPADE}, {"10", HEART}, {"6", HEART}, {"5", DIAMOND}, {"6", SPADE}, {"9", HEART}, {"7", DIAMOND}, {"Jack", SPADE}, {"Ace", DIAMOND}, {"9", CLUB}, {"Jack", DIAMOND}, {"7", SPADE}, {"King", DIAMOND}, {"10", CLUB}, {"King", SPADE}, {"8", CLUB}, {"9", SPADE}, {"6", CLUB}, {"Ace", CLUB}, {"3", SPADE}, {"8", SPADE}, {"9", DIAMOND}, {"2", HEART}, {"4", DIAMOND}, {"6", DIAMOND}, {"3", CLUB}, {"Queen", CLUB}, {"10", SPADE}, {"8", DIAMOND}, {"8", HEART}, {"Ace", SPADE}, {"Jack", HEART}, {"2", CLUB}, {"4", SPADE}, {"2", SPADE}, {"2", DIAMOND}, {"King", CLUB}, {"Queen", SPADE}, {"Queen", DIAMOND}, {"7", CLUB}, {"7", HEART}, {"5", CLUB}, {"10", DIAMOND}, {"4", CLUB}, {"King", HEART}, {"Ace", HEART},
-    };
-    deck_node_t *deck;
-
-    deck = init_deck(cards);
-    print_deck(deck);
-    printf("\n");
-    sort_deck(&deck);
-    printf("\n");
-    print_deck(deck);
-    return (0);
+    *deck = sorted;
 }
